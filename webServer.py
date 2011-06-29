@@ -89,8 +89,8 @@ class Headphones:
 						<th align="left" width="120">Album Name</th>
 						<th align="center" width="100">Release Date</th>
 						<th align="center" width="300">Status</th>
-						<th>      </th>
-						</tr>''' % (artistname[0]))
+						<th><a href="queueAllAlbums?ArtistID=%s">download all</a></th>
+						</tr>''' % (artistname[0],ArtistID))
 		while i < len(results):
 			if results[i][3] == 'Skipped':
 				newStatus = '''%s [<A class="external" href="queueAlbum?AlbumID=%s&ArtistID=%s">want</a>]''' % (results[i][3], results[i][2], ArtistID)
@@ -295,6 +295,24 @@ class Headphones:
 
 		
 	queueAlbum.exposed = True
+	
+	def queueAllAlbums(self, ArtistID):
+		conn=sqlite3.connect(database)
+		c=conn.cursor()
+		c.execute('''SELECT AlbumID from albums WHERE ArtistID="%s" AND status="Skipped" order by ReleaseDate DESC''' % ArtistID)
+		results = c.fetchall()
+		i = 0
+		while i < len(results):
+			logger.log(u"Marking album: " + results[i][0] + "as wanted...")
+			c.execute('UPDATE albums SET status = "Wanted" WHERE AlbumID="%s"' % results[i][0])
+			conn.commit()
+			import searcher
+			searcher.searchNZB(results[i][0])
+			i = i+1
+		c.close()
+		raise cherrypy.HTTPRedirect("/artistPage?ArtistID=%s" % ArtistID)
+	
+	queueAllAlbums.exposed = True
 
 	def unqueueAlbum(self, AlbumID, ArtistID):
 		conn=sqlite3.connect(database)
