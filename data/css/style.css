@@ -57,7 +57,7 @@ h1{
 	}
 .table{
 	padding: 10px;
-	font-size:24px;
+	font-size:18px;
 	background-color: #ffffff;
 	width: 95%;
 	margin-top: 25px;
@@ -81,7 +81,7 @@ h1{
 	}
 .center{
 	text-align: center;
-	font-size: 18px;
+	font-size: 16px;
 	}
 .smalltext{
 	font-size: 11px;
@@ -113,3 +113,12 @@ a.externalred {
 	color: red;
 	font-size:12px;
 	}
+#results {
+	margin: 5px 10px;
+	text-align: center;
+}
+#results ul {
+	list-style-type: none;
+	padding: 0;
+	margin: 0;
+}

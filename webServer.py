@@ -13,15 +13,22 @@ import sys
 import configobj
 from headphones import FULL_PATH, config_file
 import logger
+from Cheetah.Template import Template
 
 database = os.path.join(FULL_PATH, 'headphones.db')
 
 class Headphones:
+	
+	def __init__(self,templatePath):
+		"""docstring for __init__"""
+		self.templatePath = templatePath
 
 	def index(self):
-		page = [templates._header]
-		page.append(templates._logobar)
-		page.append(templates._nav)
+		
+		filename = os.path.join(self.templatePath,"index.tmpl")
+		template = Template(file=filename)
+		template.rootPath = "."
+		template.appPath = "."
 		#Display Database if it exists:
 		if os.path.exists(database):
 			#logger.log(u"Loading artists from the database...")
@@ -30,87 +37,44 @@ class Headphones:
 			c.execute('SELECT ArtistName, ArtistID, Status from artists order by ArtistSortName collate nocase')
 			results = c.fetchall()
 			i = 0
-			page.append('''<div class="table"><table border="0" cellpadding="3">
-						<tr>
-						<th align="left" width="170">Artist Name</th>
-						<th align="center" width="100">Status</th>
-						<th align="center" width="300">Upcoming Albums</th>
-						<th>      </th>
-						</tr>''')
+			template.artists = []
 			while i < len(results):
 				c.execute('''SELECT AlbumTitle, ReleaseDate, DateAdded, AlbumID from albums WHERE ArtistID='%s' order by ReleaseDate DESC''' % results[i][1])
 				latestalbum = c.fetchall()
 				today = datetime.date.today()
-				if len(latestalbum) > 0:
-					if latestalbum[0][1] > datetime.date.isoformat(today):
-						newalbumName = '<font color="#5DFC0A" size="3px"><a href="albumPage?AlbumID=%s"><i>%s</i>' % (latestalbum[0][3], latestalbum[0][0])
-						releaseDate = '(%s)</a></font>' % latestalbum[0][1]
-					else:
-						newalbumName = '<font color="#CFCFCF">None</font>'
-						releaseDate = ""
 				if len(latestalbum) == 0:
-						newalbumName = '<font color="#CFCFCF">None</font>'
-						releaseDate = ""					
-				if results[i][2] == 'Paused':
-					newStatus = '''<font color="red"><b>%s</b></font>(<A class="external" href="resumeArtist?ArtistID=%s">resume</a>)''' % (results[i][2], results[i][1])
-				else:
-					newStatus = '''%s(<A class="external" href="pauseArtist?ArtistID=%s">pause</a>)''' % (results[i][2], results[i][1])
-				page.append('''<tr><td align="left" width="300"><a href="artistPage?ArtistID=%s">%s</a> 
-								(<A class="external" href="http://musicbrainz.org/artist/%s">link</a>) [<A class="externalred" href="deleteArtist?ArtistID=%s">delete</a>]</td>
-								<td align="center" width="160">%s</td>
-								<td align="center">%s %s</td></tr>''' % (results[i][1], results[i][0], results[i][1], results[i][1], newStatus, newalbumName, releaseDate))	
+					results[i][3] = '<font color="#CFCFCF">None</font>'
+					results[i][4] = ""
+				elif latestalbum[0][1] > datetime.date.isoformat(today):
+					results[i][3] = '<font color="#5DFC0A" size="3px"><a href="albumPage?AlbumID=%s"><i>%s</i>' % (latestalbum[0][3], latestalbum[0][0])
+					results[i][4] = '(%s)</a></font>' % latestalbum[0][1]
+					
+				template.artists.append(results[i])
 				i = i+1
 			c.close()
-			page.append('''</table></div>''')
-			
-		else:
-			page.append("""<div class="datanil">Add some artists to the database!</div>""")
-		page.append(templates._footer)
-		return page
+		return str(template)
 	index.exposed = True
-	
 
 	def artistPage(self, ArtistID):
-		page = [templates._header]
-		page.append(templates._logobar)
-		page.append(templates._nav)
+		filename = os.path.join(self.templatePath,"artistPage.tmpl")
+		template = Template(file=filename)
+		template.rootPath = "."
+		template.appPath = "."
+		template.artistID = ArtistID
 		conn=sqlite3.connect(database)
 		c=conn.cursor()
 		c.execute('''SELECT ArtistName from artists WHERE ArtistID="%s"''' % ArtistID)
 		artistname = c.fetchall()
+		template.artistName = artistname[0]
 		c.execute('''SELECT AlbumTitle, ReleaseDate, AlbumID, Status, ArtistName, AlbumASIN from albums WHERE ArtistID="%s" order by ReleaseDate DESC''' % ArtistID)
 		results = c.fetchall()
 		c.close()
 		i = 0
-		page.append('''<div class="table"><table border="0" cellpadding="3">
-						<tr><p align="center">%s <br /></p></tr>
-						<tr>
-						<th align="left" width="50"></th>
-						<th align="left" width="120">Album Name</th>
-						<th align="center" width="100">Release Date</th>
-						<th align="center" width="300">Status</th>
-						<th><a href="queueAllAlbums?ArtistID=%s">download all</a></th>
-						</tr>''' % (artistname[0],ArtistID))
+		template.albums = []
 		while i < len(results):
-			if results[i][3] == 'Skipped':
-				newStatus = '''%s [<A class="external" href="queueAlbum?AlbumID=%s&ArtistID=%s">want</a>]''' % (results[i][3], results[i][2], ArtistID)
-			elif results[i][3] == 'Wanted':
-				newStatus = '''<b>%s</b>[<A class="external" href="unqueueAlbum?AlbumID=%s&ArtistID=%s">skip</a>]''' % (results[i][3], results[i][2], ArtistID)				
-			elif results[i][3] == 'Downloaded':
-				newStatus = '''<b>%s</b>[<A class="external" href="queueAlbum?AlbumID=%s&ArtistID=%s">retry</a>]''' % (results[i][3], results[i][2], ArtistID)
-			elif results[i][3] == 'Snatched':
-				newStatus = '''<b>%s</b>[<A class="external" href="queueAlbum?AlbumID=%s&ArtistID=%s">retry</a>]''' % (results[i][3], results[i][2], ArtistID)
-			else:
-				newStatus = '%s' % (results[i][3])
-			page.append('''<tr><td align="left"><img src="http://ec1.images-amazon.com/images/P/%s.01.MZZZZZZZ.jpg" height="50" width="50"></td>
-							<td align="left" width="240"><a href="albumPage?AlbumID=%s">%s</a> 
-							(<A class="external" href="http://musicbrainz.org/release/%s.html">link</a>)</td>
-							<td align="center" width="160">%s</td>
-							<td align="center">%s</td></tr>''' % (results[i][5], results[i][2], results[i][0], results[i][2], results[i][1], newStatus))	
+			template.albums.append(results[i])
 			i = i+1
-		page.append('''</table></div>''')
-		page.append(templates._footer)
-		return page
+		return str(template)
 	artistPage.exposed = True
 	
 	
@@ -157,7 +121,6 @@ class Headphones:
 	
 	
 	def findArtist(self, name):
-	
 		page = [templates._header]
 		if len(name) == 0 or name == 'Add an artist':
 			raise cherrypy.HTTPRedirect("/")
@@ -182,15 +145,17 @@ class Headphones:
 	findArtist.exposed = True
 
 	def artistInfo(self, artistid):
-		page = [templates._header]
+		
+		filename = os.path.join(self.templatePath,"artistInfo.tmpl")
+		template = Template(file=filename)
+		template.rootPath = "."
+		template.appPath = "."
 		inc = ws.ArtistIncludes(releases=(m.Release.TYPE_OFFICIAL, m.Release.TYPE_ALBUM), releaseGroups=True)
 		artist = ws.Query().getArtistById(artistid, inc)
-		page.append('''Artist Name: %s </br> ''' % artist.name)
-		page.append('''Unique ID: %s </br></br>Albums:<br />''' % u.extractUuid(artist.id))
-		for rg in artist.getReleaseGroups():
-			page.append('''%s <br />''' % rg.title)
-		return page
-		
+		template.artistName = artist.name
+		template.artistUuid = artistid
+		template.releaseGroups = artist.getReleaseGroups()
+		return str(template)
 	artistInfo.exposed = True
 
 	def addArtist(self, artistid):
@@ -452,3 +417,31 @@ class Headphones:
 		sys.exit(0)
 
 	shutdown.exposed = True
+
+class Api:
+	
+	def __init__(self,templatePath):
+		"""docstring for __init__"""
+		self.templatePath = templatePath
+	#end def __init__
+	
+	def searchReleases(self,query):
+		"""docstring for searchReleases"""
+		import json
+		response = {}
+		if len(query) == 0:
+			response['error'] = {'message':'No query specified','code':301}
+			return json.dumps(response)
+		else:
+			releaseResults = ws.Query().getReleases(ws.ReleaseFilter(string.replace(query, '&', '%38'), limit=0))
+			if len(releaseResults) == 0:
+				logger.log(u"No results found for " + query)
+				response = {'error':{'message':'No results found','code':404}}
+			else:
+				response['results'] = []
+				for result in releaseResults:
+					release = result.release
+					response['results'].append({'title':release.title,'id':u.extractUuid(release.id),'artist':release.artist.name})
+		return json.dumps(response)
+	searchReleases.exposed = True
+	#end def api/search/release
