@@ -79,44 +79,29 @@ class Headphones:
 	
 	
 	def albumPage(self, AlbumID):
-		page = [templates._header]
-		page.append(templates._logobar)
-		page.append(templates._nav)
 		
+		filename = os.path.join(self.templatePath,"albumPage.tmpl")
+		template = Template(file=filename)
+		template.rootPath = "."
+		template.appPath = "."
 		conn=sqlite3.connect(database)
 		c=conn.cursor()
 		c.execute('''SELECT ArtistID, ArtistName, AlbumTitle, TrackTitle, TrackDuration, TrackID, AlbumASIN from tracks WHERE AlbumID="%s"''' % AlbumID)
 		results = c.fetchall()
-		if results[0][6]:
-			albumart = '''<br /><img src="http://ec1.images-amazon.com/images/P/%s.01.LZZZZZZZ.jpg" height="200" width="200"><br /><br />''' % results[0][6]
-		else:
-			albumart = ''
 		c.close()
+		template.albumASIN = results[0][6]
+		template.artistID = results[0][0]
+		template.artistName = results[0][1]
+		template.albumTitle = results[0][2]
+		template.tracks = []
 		i = 0
-		page.append('''<div class="table" align="center"><table border="0" cellpadding="3">
-					<tr><a href="artistPage?ArtistID=%s">%s</a> - %s<br />
-					<a href="queueAlbum?AlbumID=%s&ArtistID=%s">Download<br />%s</tr>
-					<br /><tr>
-					<th align="left" width="100">Track #</th>
-					<th align="left" width="100">Track Title</th>
-					<th align="center" width="300">Duration</th>
-					<th>      </th>
-					</tr>''' % (results[0][0], results[0][1], results[0][2], AlbumID, results[0][0], albumart))
 		while i < len(results):
-			if results[i][4]:
-				duration = time.strftime("%M:%S", time.gmtime(int(results[i][4])/1000))
-			else:
-				duration = 'n/a'
-			page.append('''<tr><td align="left" width="120">%s</td>
-							<td align="left" width="240">%s (<A class="external" href="http://musicbrainz.org/recording/%s.html">link</a>)</td>
-							<td align="center">%s</td></tr>''' % (i+1, results[i][3], results[i][5], duration))	
+			track = list(results[i])
+			track.append(i+1)
+			template.tracks.append(track)
 			i = i+1
-		page.append('''</table></div>''')
 
-		
-		page.append(templates._footer)
-		return page
-	
+		return str(template)
 	albumPage.exposed = True
 	
 	
