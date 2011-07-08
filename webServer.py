@@ -284,30 +284,17 @@ class Headphones:
 	upcoming.exposed = True
 	
 	def manage(self):
+		filename = os.path.join(self.templatePath,"manage.tmpl")
+		template = Template(file=filename)
+		template.rootPath = "."
+		template.appPath = "."
 		config = configobj.ConfigObj(config_file)
 		try:
 			path = config['General']['path_to_xml']
 		except:
 			path = 'Absolute path to iTunes XML or Top-Level Music Directory'
-		page = [templates._header]
-		page.append(templates._logobar)
-		page.append(templates._nav)
-		page.append('''<div class="table"><div class="config"><h1>Import or Sync Your iTunes Library/Music Folder</h1><br />
-		Enter the full path to your iTunes XML file or music folder<br /><br />
-		i.e. /Users/"username"/Music/iTunes/iTunes Music Library.xml<br />
-		<i>or</i> /Users/"username"/Music/iTunes/iTunes Media/Music <br /><br />(artists should have their own directories for folder import to work)
-		<br /><br />note: This process can take a LONG time!<br /><br />
-		Once you click "Submit" you can navigate away from this
-			page while the process runs.<br /><br /><br />
-		<form action="importItunes" method="GET" align="center">
-			<input type="text" value="%s" onfocus="if
-			(this.value==this.defaultValue) this.value='';" name="path" size="70" />
-			<input type="submit" /></form><br /><br /></div></div>
-			<div class="table"><div class="config"><h1>Force Search</h1><br />
-			<a href="forceSearch">Force Check for Wanted Albums</a><br /><br />
-			<a href="forceUpdate">Force Update Active Artists </a><br /><br /><br /></div></div>''' % path)
-		page.append(templates._footer)
-		return page
+		template.path = path
+		return str(template)
 	manage.exposed = True
 	
 	def importItunes(self, path):
