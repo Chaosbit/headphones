@@ -276,11 +276,11 @@ class Headphones:
 	unqueueAlbum.exposed = True
 	
 	def upcoming(self):
-		page = [templates._header]
-		page.append(templates._logobar)
-		page.append(templates._nav)
-		page.append(templates._footer)
-		return page
+		filename = os.path.join(self.templatePath,"upcoming.tmpl")
+		template = Template(file=filename)
+		template.rootPath = "."
+		template.appPath = "."
+		return str(template)
 	upcoming.exposed = True
 	
 	def manage(self):
@@ -320,21 +320,19 @@ class Headphones:
 		
 	
 	def history(self):
-		page = [templates._header]
-		page.append(templates._logobar)
-		page.append(templates._nav)
-		page.append(templates._footer)
-		return page
+		filename = os.path.join(self.templatePath,"history.tmpl")
+		template = Template(file=filename)
+		template.rootPath = "."
+		template.appPath = "."
+		return str(template)
 	history.exposed = True
 	
 	def config(self):
-		page = [templates._header]
-		page.append(templates._logobar)
-		page.append(templates._nav)
-		page.append(config.form)
-		page.append(templates._footer)
-		return page
-					
+		filename = os.path.join(self.templatePath,"config.tmpl")
+		template = Template(file=filename)
+		template.rootPath = "."
+		template.appPath = "."
+		return str(template)
 	config.exposed = True
 	
 	
